@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Reader - Gemini API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        danger: '#EF4444',
+                        darkblue: '#1E40AF'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-center text-darkblue mb-2">Prescription Reader</h1>
+            <p class="text-center text-gray-600 mb-6">Extract prescription details automatically using Google's Gemini AI</p>
+            <div class="w-full h-1 bg-gradient-to-r from-primary via-secondary to-accent rounded-full"></div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Upload Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Upload Prescription</h2>
+                
+                <div class="mb-4">
+                    <label for="api_key" class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
+                    <input type="text" id="api_key" name="api_key" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                        placeholder="Enter your Gemini API key">
+                    <p class="mt-1 text-xs text-gray-500">You can get your API key from <a href="https://ai.google.dev/" target="_blank" class="text-primary underline">Google AI Studio</a></p>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="prescription_image" class="block text-sm font-medium text-gray-700 mb-1">Upload Prescription Image</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="prescription_image" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div id="dropzone" class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                                <p class="text-xs text-gray-500">PNG or JPG (Max 16MB)</p>
+                            </div>
+                            <div id="image_preview" class="hidden w-full h-40 bg-cover bg-center">
+                                <div class="w-full h-full bg-gray-900 opacity-50 flex items-center justify-center">
+                                    <p class="text-white text-sm">Click to change image</p>
+                                </div>
+                            </div>
+                            <input id="prescription_image" name="prescription_image" type="file" class="hidden" accept=".jpg,.jpeg,.png" />
+                        </label>
+                    </div>
+                </div>
+                
+                <button id="analyze_btn" class="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/70 transition-colors">
+                    Analyze Prescription
+                </button>
+                
+                <div id="error" class="mt-4 p-3 bg-red-100 text-red-800 rounded-md hidden"></div>
+                <div id="loading" class="mt-4 text-center hidden">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+                    <p class="mt-2 text-gray-600">Analyzing prescription... This may take a moment.</p>
+                </div>
+            </div>
+            
+            <!-- Results -->
+            <div id="results" class="bg-white p-6 rounded-lg shadow-md hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Prescription Information</h2>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <h3 class="text-sm font-medium text-gray-500">Patient Name</h3>
+                            <p id="patient_name" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <h3 class="text-sm font-medium text-gray-500">Doctor Name</h3>
+                            <p id="doctor_name" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <h3 class="text-sm font-medium text-gray-500">Date</h3>
+                        <p id="date" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-3 rounded-md">
+                        <h3 class="text-sm font-medium text-blue-700">Medication</h3>
+                        <p id="medication_name" class="mt-1 text-lg font-semibold text-blue-900">-</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <h3 class="text-sm font-medium text-gray-500">Dosage</h3>
+                            <p id="dosage" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <h3 class="text-sm font-medium text-gray-500">Schedule</h3>
+                            <p id="schedule" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-md">
+                            <h3 class="text-sm font-medium text-gray-500">Quantity</h3>
+                            <p id="quantity" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <h3 class="text-sm font-medium text-gray-500">Directions</h3>
+                        <p id="directions" class="mt-1 font-semibold text-gray-800">-</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <h3 class="text-sm font-medium text-gray-500">Refills</h3>
+                        <p id="refills" class="mt-1 font-semibold text-gray-800">-</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <h3 class="text-sm font-medium text-gray-500">Pharmacy Info</h3>
+                        <p id="pharmacy_info" class="mt-1 font-semibold text-gray-800">-</p>
+                    </div>
+                    
+                    <div id="validation_section" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <h3 class="text-sm font-medium text-yellow-700">Validation Warnings</h3>
+                        <ul id="validation_list" class="list-disc pl-5 mt-2 text-sm text-yellow-700"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>Prescription Reader using Google Gemini API &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Image preview functionality
+        document.getElementById('prescription_image').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dropzone = document.getElementById('dropzone');
+                    const preview = document.getElementById('image_preview');
+                    
+                    dropzone.classList.add('hidden');
+                    preview.classList.remove('hidden');
+                    preview.style.backgroundImage = `url(${e.target.result})`;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Form submission
+        document.getElementById('analyze_btn').addEventListener('click', function() {
+            const apiKey = document.getElementById('api_key').value;
+            const fileInput = document.getElementById('prescription_image');
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            
+            // Clear previous results
+            errorDiv.textContent = '';
+            errorDiv.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            
+            // Validate inputs
+            if (!apiKey) {
+                errorDiv.textContent = 'Please enter your Gemini API key';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                errorDiv.textContent = 'Please select a prescription image to upload';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('api_key', apiKey);
+            formData.append('prescription_image', fileInput.files[0]);
+            
+            // Show loading indicator
+            loadingDiv.classList.remove('hidden');
+            
+            // Send request to the API
+            fetch('/api/analyze-prescription', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading indicator
+                loadingDiv.classList.add('hidden');
+                
+                if (data.error) {
+                    errorDiv.textContent = 'Error: ' + data.error;
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+                
+                // Display results
+                resultsDiv.classList.remove('hidden');
+                
+                // Update each field
+                document.getElementById('patient_name').textContent = data.patient_name || 'Not found';
+                document.getElementById('doctor_name').textContent = data.doctor_name || 'Not found';
+                document.getElementById('date').textContent = data.date || 'Not found';
+                document.getElementById('medication_name').textContent = data.medication_name || 'Not found';
+                document.getElementById('dosage').textContent = data.dosage || 'Not found';
+                document.getElementById('schedule').textContent = data.schedule || 'Not found';
+                document.getElementById('directions').textContent = data.directions || 'Not found';
+                document.getElementById('quantity').textContent = data.quantity || 'Not found';
+                document.getElementById('refills').textContent = data.refills || 'Not found';
+                document.getElementById('pharmacy_info').textContent = data.pharmacy_info || 'Not found';
+                
+                // Handle validation warnings
+                const validationSection = document.getElementById('validation_section');
+                const validationList = document.getElementById('validation_list');
+                
+                if (data.validation && data.validation.length > 0) {
+                    // Clear previous validation warnings
+                    validationList.innerHTML = '';
+                    
+                    // Add new validation warnings
+                    data.validation.forEach(flag => {
+                        const li = document.createElement('li');
+                        li.textContent = flag.replace('MISSING_', 'Missing ').toLowerCase()
+                            .replace(/\b\w/g, c => c.toUpperCase());
+                        validationList.appendChild(li);
+                    });
+                    
+                    // Show validation section
+                    validationSection.classList.remove('hidden');
+                } else {
+                    validationSection.classList.add('hidden');
+                }
+            })
+            .catch(error => {
+                loadingDiv.classList.add('hidden');
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
