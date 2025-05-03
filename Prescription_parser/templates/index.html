@@ -43,8 +43,8 @@
                                 <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
                                 <p class="text-xs text-gray-500">PNG or JPG (Max 16MB)</p>
                             </div>
-                            <div id="image_preview" class="hidden w-full h-40 bg-cover bg-center">
-                                <div class="w-full h-full bg-gray-900 opacity-50 flex items-center justify-center">
+                            <div id="image_preview" class="hidden w-full h-40 bg-cover bg-center rounded-lg">
+                                <div class="w-full h-full bg-gray-900 bg-opacity-50 flex items-center justify-center">
                                     <p class="text-white text-sm">Click to change image</p>
                                 </div>
                             </div>
@@ -86,41 +86,13 @@
                         <p id="date" class="mt-1 text-lg font-semibold text-gray-800">-</p>
                     </div>
                     
+                    <!-- Tabbed Medication Section -->
                     <div class="bg-blue-50 p-3 rounded-md">
-                        <h3 class="text-sm font-medium text-blue-700">Medication</h3>
-                        <p id="medication_name" class="mt-1 text-lg font-semibold text-blue-900">-</p>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-gray-50 p-3 rounded-md">
-                            <h3 class="text-sm font-medium text-gray-500">Dosage</h3>
-                            <p id="dosage" class="mt-1 text-lg font-semibold text-gray-800">-</p>
+                        <h3 class="text-sm font-medium text-blue-700">Medications</h3>
+                        <div id="medication_tabs" class="mt-2">
+                            <nav id="tab_nav" class="-mb-px flex space-x-4" aria-label="Tabs"></nav>
+                            <div id="tab_content" class="mt-4"></div>
                         </div>
-                        
-                        <div class="bg-gray-50 p-3 rounded-md">
-                            <h3 class="text-sm font-medium text-gray-500">Schedule</h3>
-                            <p id="schedule" class="mt-1 text-lg font-semibold text-gray-800">-</p>
-                        </div>
-                        
-                        <div class="bg-gray-50 p-3 rounded-md">
-                            <h3 class="text-sm font-medium text-gray-500">Quantity</h3>
-                            <p id="quantity" class="mt-1 text-lg font-semibold text-gray-800">-</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-3 rounded-md">
-                        <h3 class="text-sm font-medium text-gray-500">Directions</h3>
-                        <p id="directions" class="mt-1 font-semibold text-gray-800">-</p>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-3 rounded-md">
-                        <h3 class="text-sm font-medium text-gray-500">Refills</h3>
-                        <p id="refills" class="mt-1 font-semibold text-gray-800">-</p>
-                    </div>
-                    
-                    <div class="bg-gray-50 p-3 rounded-md">
-                        <h3 class="text-sm font-medium text-gray-500">Pharmacy Info</h3>
-                        <p id="pharmacy_info" class="mt-1 font-semibold text-gray-800">-</p>
                     </div>
                     
                     <div id="validation_section" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -132,7 +104,7 @@
         </div>
         
         <footer class="mt-12 text-center text-gray-500 text-sm">
-            <p>Prescription Reader using Google Gemini API &copy; 2025</p>
+            <p>Prescription Reader using Google Gemini API © 2025</p>
         </footer>
     </div>
 
@@ -148,7 +120,7 @@
                     dropzone.classList.add('hidden');
                     preview.classList.remove('hidden');
                     preview.style.backgroundImage = `url(${e.target.result})`;
-                }
+                };
                 reader.readAsDataURL(file);
             }
         });
@@ -170,7 +142,7 @@
             }
     
             const formData = new FormData();
-            formData.append('prescription_image', fileInput.files[0]); // ✅ Removed api_key append
+            formData.append('prescription_image', fileInput.files[0]);
     
             loadingDiv.classList.remove('hidden');
     
@@ -192,14 +164,87 @@
                     document.getElementById('patient_name').textContent = data.patient_name || 'Not found';
                     document.getElementById('doctor_name').textContent = data.doctor_name || 'Not found';
                     document.getElementById('date').textContent = data.date || 'Not found';
-                    document.getElementById('medication_name').textContent = data.medication_name || 'Not found';
-                    document.getElementById('dosage').textContent = data.dosage || 'Not found';
-                    document.getElementById('schedule').textContent = data.schedule || 'Not found';
-                    document.getElementById('directions').textContent = data.directions || 'Not found';
-                    document.getElementById('quantity').textContent = data.quantity || 'Not found';
-                    document.getElementById('refills').textContent = data.refills || 'Not found';
-                    document.getElementById('pharmacy_info').textContent = data.pharmacy_info || 'Not found';
     
+                    const tabNav = document.getElementById('tab_nav');
+                    const tabContent = document.getElementById('tab_content');
+                    tabNav.innerHTML = '';
+                    tabContent.innerHTML = '';
+    
+                    // Handle medications
+                    const medications = data.medications || [];
+                    if (medications.length > 0) {
+                        medications.forEach((med, index) => {
+                            // Create tab button
+                            const tabButton = document.createElement('button');
+                            tabButton.className = `tab-button px-3 py-2 text-sm font-medium border-b-2 ${index === 0 ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`;
+                            tabButton.textContent = med.medication_name || `Medication ${index + 1}`;
+                            tabButton.setAttribute('data-tab', index);
+                            tabNav.appendChild(tabButton);
+    
+                            // Create tab panel
+                            const tabPanel = document.createElement('div');
+                            tabPanel.className = `tab-panel ${index === 0 ? '' : 'hidden'}`;
+                            tabPanel.setAttribute('data-tab', index);
+                            tabPanel.innerHTML = `
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 p-3 rounded-md">
+                                        <h3 class="text-sm font-medium text-blue-700">Medication</h3>
+                                        <p class="mt-1 text-lg font-semibold text-blue-900">${med.medication_name || 'Not found'}</p>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div class="bg-gray-50 p-3 rounded-md">
+                                            <h3 class="text-sm font-medium text-gray-500">Dosage</h3>
+                                            <p class="mt-1 text-lg font-semibold text-gray-800">${med.dosage || 'Not found'}</p>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-md">
+                                            <h3 class="text-sm font-medium text-gray-500">Schedule</h3>
+                                            <p class="mt-1 text-lg font-semibold text-gray-800">${med.schedule || 'Not found'}</p>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-md">
+                                            <h3 class="text-sm font-medium text-gray-500">Quantity</h3>
+                                            <p class="mt-1 text-lg font-semibold text-gray-800">${med.quantity || 'Not found'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="bg-gray-50 p-3 rounded-md">
+                                            <h3 class="text-sm font-medium text-gray-500">Directions</h3>
+                                            <p class="mt-1 font-semibold text-gray-800">${med.directions || 'Not found'}</p>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-md">
+                                            <h3 class="text-sm font-medium text-gray-500">Refills</h3>
+                                            <p class="mt-1 font-semibold text-gray-800">${med.refills || 'Not found'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-md">
+                                        <h3 class="text-sm font-medium text-gray-500">Notes</h3>
+                                        <p class="mt-1 font-semibold text-gray-800">${med.notes || 'Not found'}</p>
+                                    </div>
+                                </div>
+                            `;
+                            tabContent.appendChild(tabPanel);
+                        });
+    
+                        // Add tab switching logic
+                        document.querySelectorAll('.tab-button').forEach(button => {
+                            button.addEventListener('click', () => {
+                                const tabIndex = button.getAttribute('data-tab');
+                                document.querySelectorAll('.tab-button').forEach(btn => {
+                                    btn.classList.remove('border-primary', 'text-primary');
+                                    btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                                });
+                                document.querySelectorAll('.tab-panel').forEach(panel => {
+                                    panel.classList.add('hidden');
+                                });
+                                button.classList.add('border-primary', 'text-primary');
+                                button.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                                document.querySelector(`.tab-panel[data-tab="${tabIndex}"]`).classList.remove('hidden');
+                            });
+                        });
+                    } else {
+                        tabContent.innerHTML = '<p class="text-gray-600">No medications found</p>';
+                    }
+    
+                    // Handle validation
                     const validationSection = document.getElementById('validation_section');
                     const validationList = document.getElementById('validation_list');
     
@@ -208,7 +253,8 @@
                         data.validation.forEach(flag => {
                             const li = document.createElement('li');
                             li.textContent = flag.replace('MISSING_', 'Missing ').toLowerCase()
-                                .replace(/\b\w/g, c => c.toUpperCase());
+                                .replace(/\b\w/g, c => c.toUpperCase())
+                                .replace(/_(\d+)/, ' (Medication $1)');
                             validationList.appendChild(li);
                         });
                         validationSection.classList.remove('hidden');
